@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+from worker import worker
 
 class videoAnalyzer:
     def __init__(self,object_type):
@@ -106,7 +107,10 @@ class videoAnalyzer:
                 self.vehicles_recent_detections.append((cx, cy, current_frame, matched_id))
 
                 # Save image and create alert
-                if matched_id != self.vehicle_id - 1:
+                print(f'MatchedID: {matched_id}')
+                print(f'VeiculoID: {self.vehicle_id}')
+                if matched_id == self.vehicle_id - 1:
+                    print('Entrou no Loop')
                     coordenadas = (xmin,ymin,xmax,ymax)
                     roi = self._get_roi(frame,coordenadas)
                     self._save_imgs('imgs/Veiculos',f'veiculo_{matched_id}.png',roi)
@@ -142,13 +146,15 @@ class videoAnalyzer:
             print(f'centroide:{cx.item(),cy.item()}')
             # Iterate over the self.people_recent_detections = [] and check if centroid is close to a previous one
             matched_id = None # Gives previous id to centroid that is closer than the thresholds
+            min_dist = 200
             for recent_person in reversed(self.people_recent_detections): # Iterate trough reversed list so last detectd vehicles are processed first
                 prev_cx, prev_cy,_, prev_id = recent_person
                 distance = ((cx-prev_cx)**2 + (cy-prev_cy)**2)**0.5
                 print(f'distance:{distance}')
-                if (distance) < 80:
+                if (distance) < min_dist:
                     matched_id = prev_id
-                    break
+                    min_dist = distance
+                    
 
             # if id wasn't matched create new id
             if matched_id == None:
@@ -168,19 +174,31 @@ class videoAnalyzer:
             found_helmet = False
             for helmet in helmet_boxes:
                 h_x_min, h_y_min, h_x_max, h_y_max = helmet
-                if (
-                    h_x_min >= helmet_region_x_min
-                    and h_x_max <= helmet_region_x_max
-                    and h_y_min >= helmet_region_y_min
-                    and h_y_max <= helmet_region_y_max
-                ):
+                #centroides do capacete
+                h_cx = (h_x_max + h_x_min)/2
+                h_cy = (h_y_max + h_y_min)/2
+                #distancia do centroide do capacete para o centro da linha superior do bbox da pessoa
+                helmet_centroid = np.array([h_cx,h_cy])
+                person_centroid = np.array([cx,ymin])
+                # Desenhar a linha entre os dois pontos (verde)
+                cv2.line(frame, tuple(helmet_centroid.astype(int)), tuple(person_centroid.astype(int)), (0, 255, 0), 2)
+
+                # Desenhar círculos nas extremidades da linha (azul)
+                cv2.circle(frame, tuple(helmet_centroid.astype(int)), 5, (255, 0, 0), -1)  # Ponto azul na extremidade do capacete
+                cv2.circle(frame, tuple(person_centroid.astype(int)), 5, (255, 0, 0), -1)  # Ponto azul na extremidade da pessoa
+                dist_helmet2person = np.linalg.norm(helmet_centroid - person_centroid)
+                print(f'Dist_helmet2person: {dist_helmet2person}')
+                if dist_helmet2person < 100:
                     found_helmet = True
+            
                     break
             print(f'Found Helmet:{found_helmet}')
             print(f'Matched_id:{matched_id} -- Person_id-1:{self.person_id-1}')
             if found_helmet == False and matched_id == self.person_id -1:
                 print('Entrou no if')
                 # salva imagem
+                if len(helmet_boxes) != 0:
+                    print(f'helmet_boxes:{helmet_boxes}')
                 coordenadas = (xmin,ymin,xmax,ymax)
                 roi = self._get_roi(frame,coordenadas)
                 self._save_imgs('imgs/PessoasSemCapacete',f'pessoa_{matched_id}.png',roi)

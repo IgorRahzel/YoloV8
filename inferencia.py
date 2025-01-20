@@ -35,6 +35,11 @@ model = YOLO(r"best.pt")
 video_path = 'ch5-cut.mp4'
 cap = cv2.VideoCapture(video_path)
 
+# Definir o instante inicial do vídeo (em segundos)
+start_time_seconds = 100  # Por exemplo, 30 segundos
+cap.set(cv2.CAP_PROP_POS_MSEC, start_time_seconds * 1000)  # Define a posição inicial em milissegundos
+
+
 # Instanciar analisadores de vídeo
 video_analyzer_vehicles = videoAnalyzer(object_type='veiculo')
 video_analyzer_people = videoAnalyzer(object_type='pessoa')
@@ -66,7 +71,7 @@ while cap.isOpened():
         # Exibir saída em tempo real
         frame_resized = cv2.resize(frame, (640, 360))
         cv2.imshow('output', frame_resized)
-        keyboard = cv2.waitKey(1)
+        keyboard = cv2.waitKey(10)
         if keyboard == ord('q') or keyboard == 27:
             break
     else:
