@@ -8,7 +8,7 @@ class videoAnalyzer:
         if object_type not in ['veiculo','pessoa']:
             raise ValueError(f"Tipo de objeto inválido: {object_type}. Apenas 'pessoa' ou 'veiculo' são permitidos.")
         self.object_type = object_type
-        self.people_recent_detections = []
+        self.people = {}
         self.vehicles_recent_detections = []
         self.vehicle_id = 1
         self.person_id = 1
@@ -131,11 +131,6 @@ class videoAnalyzer:
             elif class_name == 'capacete':
                 helmet_boxes.append(box)
         
-        # Filter out old detections
-        self.people_recent_detections[:] = [(cx, cy, frame_id, person_id)
-                                               for cx, cy, frame_id, person_id in self.people_recent_detections
-                                               if current_frame - frame_id <= 30
-                                             ]
         
         # Anlyze every person in the frame
         for person in people_boxes:
@@ -144,15 +139,17 @@ class videoAnalyzer:
             cx = (xmin + xmax) / 2
             cy = (ymin + ymax) / 2
             print(f'centroide:{cx.item(),cy.item()}')
-            # Iterate over the self.people_recent_detections = [] and check if centroid is close to a previous one
+            # Iterate over the self.people.items() and check if centroid is close to a previous one
             matched_id = None # Gives previous id to centroid that is closer than the thresholds
             min_dist = 200
-            for recent_person in reversed(self.people_recent_detections): # Iterate trough reversed list so last detectd vehicles are processed first
-                prev_cx, prev_cy,_, prev_id = recent_person
+            for _,prev_person in self.people.items(): # Iterate trough reversed list so last detectd vehicles are processed first
+                xmin_prev,ymin_prev,xmax_prev,ymax_prev = prev_person.bbox_history[-1]
+                prev_cx = (xmin_prev + xmax_prev) / 2
+                prev_cy = (ymin_prev + ymax_prev) / 2
                 distance = ((cx-prev_cx)**2 + (cy-prev_cy)**2)**0.5
                 print(f'distance:{distance}')
                 if (distance) < min_dist:
-                    matched_id = prev_id
+                    matched_id = prev_person.id
                     min_dist = distance
                     
 
@@ -160,15 +157,15 @@ class videoAnalyzer:
             if matched_id == None:
                 matched_id = self.person_id
                 self.person_id = self.person_id + 1
+                self.people[matched_id] = worker(matched_id)
             print(f'ID:{self.person_id}')
-            # Append vehicle information to self.people_recent_detections
-            self.people_recent_detections.append((cx, cy, current_frame, matched_id))
 
-            # Calcular a região onde o capacete deve estar
-            helmet_region_x_min = xmin
-            helmet_region_x_max = xmax
-            helmet_region_y_min = ymin - (ymax - ymin) // 2
-            helmet_region_y_max = ymin
+            #Store person image:
+            if len(self.people[matched_id].bbox_history) < 10:
+                coordenadas = (xmin,ymin,xmax,ymax)
+                person_roi = self._get_roi(frame,coordenadas)
+                self.people[matched_id].frame = person_roi
+                self.people[matched_id].timestamp = timestamp
 
             # Verificar se há capacete
             found_helmet = False
@@ -190,11 +187,15 @@ class videoAnalyzer:
                 print(f'Dist_helmet2person: {dist_helmet2person}')
                 if dist_helmet2person < 100:
                     found_helmet = True
-            
                     break
+            
+            # Update helmet history
+            self.people[matched_id].add_detection((xmin,ymin,xmax,ymax), found_helmet, current_frame)
+            
+            '''
             print(f'Found Helmet:{found_helmet}')
             print(f'Matched_id:{matched_id} -- Person_id-1:{self.person_id-1}')
-            if found_helmet == False and matched_id == self.person_id -1:
+            if not found_helmet and self.people[matched_id].has_no_helmet_consecutively(threshold=3):
                 print('Entrou no if')
                 # salva imagem
                 if len(helmet_boxes) != 0:
@@ -203,3 +204,32 @@ class videoAnalyzer:
                 roi = self._get_roi(frame,coordenadas)
                 self._save_imgs('imgs/PessoasSemCapacete',f'pessoa_{matched_id}.png',roi)
                 self._log_alerts(alert_type='pessoa',obj_id=matched_id,timestamp=timestamp,alert_path='alertas/pessoasSemCapacete/alertas.log')
+                '''
+    
+
+    def create_alert(self,current_frame):
+        # Verificar se há pessoas que não foram vistas recentemente
+        to_remove = []
+        for person_id, person in self.people.items():
+            if current_frame - person.last_frame_seen > 30:  # Exemplo: 30 frames sem ser detectado
+                # Pessoa saiu do vídeo, calcular estatísticas
+                total_detections = len(person.helmet_status_history)
+                no_helmet_count = person.helmet_status_history.count(False)
+                helmet_ratio = no_helmet_count / total_detections if total_detections > 0 else 0
+
+                print(f"Pessoa {person_id} saiu do vídeo. Razão sem capacete: {helmet_ratio:.2f}")
+
+                if helmet_ratio > 0.99:  # Exemplo: Threshold de 50% sem capacete
+                    # Salvar imagem da última posição detectada
+                    last_bbox = person.bbox_history[-1]
+                    xmin, ymin, xmax, ymax = last_bbox
+                    roi = person.frame
+                    self._save_imgs('imgs/PessoasSemCapacete', f'pessoa_{person_id}.png', roi)
+                    self._log_alerts(alert_type='pessoa', obj_id=person_id, timestamp=person.timestamp, alert_path='alertas/pessoasSemCapacete/alertas.log')
+
+                # Adicionar o ID da pessoa à lista de remoção
+                to_remove.append(person_id)
+
+        # Remover pessoas que saíram do vídeo
+        for person_id in to_remove:
+            del self.people[person_id]

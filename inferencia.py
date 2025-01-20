@@ -36,7 +36,7 @@ video_path = 'ch5-cut.mp4'
 cap = cv2.VideoCapture(video_path)
 
 # Definir o instante inicial do vídeo (em segundos)
-start_time_seconds = 100  # Por exemplo, 30 segundos
+start_time_seconds = 180  # Por exemplo, 30 segundos
 cap.set(cv2.CAP_PROP_POS_MSEC, start_time_seconds * 1000)  # Define a posição inicial em milissegundos
 
 
@@ -67,6 +67,7 @@ while cap.isOpened():
         # Analisar veículos e pessoas no frame
         video_analyzer_vehicles.vehicle_analysis(frame, results, current_frame, timestamp)
         video_analyzer_people.people_analysis(frame, results, current_frame, timestamp)
+        video_analyzer_people.create_alert(current_frame)
 
         # Exibir saída em tempo real
         frame_resized = cv2.resize(frame, (640, 360))

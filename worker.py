@@ -1,20 +1,22 @@
 class worker:
-    def __init__(self, person_id):
-        self.person_id = person_id
-        self.centroid_history = []  # Histórico das posições (centroides)
+    def __init__(self, id):
+        self.id = id
+        self.bbox_history = []  # Histórico das posições (bounding boxes)
         self.helmet_status_history = []  # Histórico de uso de capacete (True/False)
         self.last_frame_seen = 0  # Último frame em que a pessoa foi detectada
+        self.frame = None
+        self.frame_timestamp = None
 
-    def add_detection(self, centroid, helmet_status, frame_id):
+    def add_detection(self, bbox, helmet_status, frame_id):
         """
         Adiciona uma nova detecção ao histórico da pessoa.
         
         Args:
-            centroid (tuple): Coordenadas do centroide (cx, cy).
+            bbox (tuple): Coordenadas do centroide (xmin, ymin,xmax,ymax).
             helmet_status (bool): True se estiver usando capacete, False caso contrário.
             frame_id (int): ID do frame atual.
         """
-        self.centroid_history.append(centroid)
+        self.bbox_history.append(bbox)
         self.helmet_status_history.append(helmet_status)
         self.last_frame_seen = frame_id
 
