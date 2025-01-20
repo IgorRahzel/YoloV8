@@ -36,7 +36,7 @@ video_path = 'ch5-cut.mp4'
 cap = cv2.VideoCapture(video_path)
 
 # Definir o instante inicial do vídeo (em segundos)
-start_time_seconds = 180  # Por exemplo, 30 segundos
+start_time_seconds = 80  # Por exemplo, 30 segundos
 cap.set(cv2.CAP_PROP_POS_MSEC, start_time_seconds * 1000)  # Define a posição inicial em milissegundos
 
 
@@ -83,6 +83,3 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 
-# Salvar os alertas gerais no arquivo principal de log
-with open("alertas/alertas.log", "w") as log_file:
-    log_file.writelines(alert_log)

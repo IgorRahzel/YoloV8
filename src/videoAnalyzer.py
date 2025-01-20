@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 from worker import worker
+from vehicle import vehicle
 
 class videoAnalyzer:
     def __init__(self,object_type):
@@ -9,17 +10,10 @@ class videoAnalyzer:
             raise ValueError(f"Tipo de objeto inválido: {object_type}. Apenas 'pessoa' ou 'veiculo' são permitidos.")
         self.object_type = object_type
         self.people = {}
-        self.vehicles_recent_detections = []
+        self.automobile= {}
         self.vehicle_id = 1
         self.person_id = 1
 
-
-    def analyse(self,frame,results):
-        if self.object_type == 'veiculo':
-            self.veihcle_analysis(results,frame)
-
-        elif self.object_type == 'pessoa':
-            self.people_analysis(results,frame)
         
     
     def _get_roi(self,frame,coordenadas):
@@ -67,13 +61,8 @@ class videoAnalyzer:
 
 
     # Analyze the vehicles in the video
-    def vehicle_analysis(self,frame,results,current_frame,timestamp):
-        # Filter out old detections
-        self.vehicles_recent_detections[:] = [(cx, cy, frame_id, vehicle_id)
-                                               for cx, cy, frame_id, vehicle_id in self.vehicles_recent_detections
-                                               if current_frame - frame_id <= 30
-                                             ]
-
+    def _vehicle_analysis(self,frame,results,current_frame,timestamp):
+        
         # Iterate over the boxes
         for i,box in enumerate(results[0].boxes.xyxy):
             # Get bounding box coordinates
@@ -90,35 +79,36 @@ class videoAnalyzer:
             
                 # Iterate over the self.vehicles_recent_detections = [] and check if centroid is close to a previous one
                 matched_id = None # Gives previous id to centroid that is closer than the thresholds
-                for recent_vehicle in reversed(self.vehicles_recent_detections): # Iterate trough reversed list so last detectd vehicles are processed first
-                    prev_cx, prev_cy,_, prev_id = recent_vehicle
+                min_dist = 80
+                for _,prev_auto in self.automobile.items():
+                    xmin_prev,ymin_prev,xmax_prev,ymax_prev = prev_auto.bbox_history[-1]
+                    prev_cx = (xmin_prev + xmax_prev) / 2
+                    prev_cy = (ymin_prev + ymax_prev) / 2
                     distance = ((cx-prev_cx)**2 + (cy-prev_cy)**2)**0.5
                     print(f'distance:{distance}')
-                    if (distance) < 80:
-                        matched_id = prev_id
-                        break
+                    if (distance) < min_dist:
+                        matched_id = prev_auto.id
+                        min_dist = distance
             
                 # if id wasn't matched create new id
                 if matched_id == None:
                     matched_id = self.vehicle_id
                     self.vehicle_id = self.vehicle_id + 1
+                    self.automobile[matched_id] = vehicle(matched_id)
+                
+                #Store vehicle image:
+                if len(self.people[matched_id].bbox_history) < 10:
+                    coordenadas = (xmin,ymin,xmax,ymax)
+                    person_roi = self._get_roi(frame,coordenadas)
+                    self.automobile[matched_id].frame = person_roi
+                    self.automobile[matched_id].timestamp = timestamp
+
             
                 # Append vehicle information to self.vehicles_recent_detections = []
-                self.vehicles_recent_detections.append((cx, cy, current_frame, matched_id))
-
-                # Save image and create alert
-                print(f'MatchedID: {matched_id}')
-                print(f'VeiculoID: {self.vehicle_id}')
-                if matched_id == self.vehicle_id - 1:
-                    print('Entrou no Loop')
-                    coordenadas = (xmin,ymin,xmax,ymax)
-                    roi = self._get_roi(frame,coordenadas)
-                    self._save_imgs('imgs/Veiculos',f'veiculo_{matched_id}.png',roi)
-                    self._log_alerts(alert_type='veiculo',obj_id=matched_id,timestamp=timestamp,alert_path='alertas/veiculos/alertas.log')
-
+                self.automobile[matched_id].add_detection((xmin,ymin,xmax,ymax),current_frame)
             
     
-    def people_analysis(self,frame,results,current_frame,timestamp):
+    def _people_analysis(self,frame,results,current_frame,timestamp):
         people_boxes = [] # List to store identified boundig boxes for people
         helmet_boxes = [] # List to store identified boundig boxes for people
         # Iterate over bounding boxes founded in the frame
@@ -191,23 +181,36 @@ class videoAnalyzer:
             
             # Update helmet history
             self.people[matched_id].add_detection((xmin,ymin,xmax,ymax), found_helmet, current_frame)
-            
-            '''
-            print(f'Found Helmet:{found_helmet}')
-            print(f'Matched_id:{matched_id} -- Person_id-1:{self.person_id-1}')
-            if not found_helmet and self.people[matched_id].has_no_helmet_consecutively(threshold=3):
-                print('Entrou no if')
-                # salva imagem
-                if len(helmet_boxes) != 0:
-                    print(f'helmet_boxes:{helmet_boxes}')
-                coordenadas = (xmin,ymin,xmax,ymax)
-                roi = self._get_roi(frame,coordenadas)
-                self._save_imgs('imgs/PessoasSemCapacete',f'pessoa_{matched_id}.png',roi)
-                self._log_alerts(alert_type='pessoa',obj_id=matched_id,timestamp=timestamp,alert_path='alertas/pessoasSemCapacete/alertas.log')
-                '''
+    
     
 
-    def create_alert(self,current_frame):
+    def video_analysis(self,frame,results,current_frame,timestamp):
+        if self.object_type == 'veiculo':
+            self._vehicle_analysis(frame,results,current_frame,timestamp)
+        elif self.object_type == 'pessoa':
+            self._people_analysis(frame,current_frame,timestamp)
+        
+        self.create_alert(current_frame)
+            
+
+    def _create_alert_vehicles(self,current_frame):
+        to_remove = []
+        for vehicle_id,vehicle in self.automobile.items():
+            if current_frame - vehicle.last_frame_seen > 30:
+                roi = vehicle.frame
+                self._save_imgs('imgs/Veiculos', f'veiculo_{vehicle_id}.png', roi)
+                self._log_alerts(alert_type='vehicle', obj_id=vehicle_id, timestamp=vehicle.timestamp, alert_path='alertas/veiculos/alertas.log')
+
+                # Adicionar o ID da pessoa à lista de remoção
+                to_remove.append(vehicle_id)
+
+        # Remover pessoas que saíram do vídeo
+        for vehicle_id in to_remove:
+            del self.people[vehicle_id]
+
+
+    
+    def _create_alert_people(self,current_frame):
         # Verificar se há pessoas que não foram vistas recentemente
         to_remove = []
         for person_id, person in self.people.items():
@@ -219,7 +222,7 @@ class videoAnalyzer:
 
                 print(f"Pessoa {person_id} saiu do vídeo. Razão sem capacete: {helmet_ratio:.2f}")
 
-                if helmet_ratio > 0.99:  # Exemplo: Threshold de 50% sem capacete
+                if helmet_ratio > 0.80:  # Exemplo: Threshold de 50% sem capacete
                     # Salvar imagem da última posição detectada
                     last_bbox = person.bbox_history[-1]
                     xmin, ymin, xmax, ymax = last_bbox
@@ -233,3 +236,10 @@ class videoAnalyzer:
         # Remover pessoas que saíram do vídeo
         for person_id in to_remove:
             del self.people[person_id]
+
+
+    def create_alert(self,current_frame):
+        if self.object_type == 'veiculos':
+            self._create_alert_vehicles(current_frame)
+        elif self.object_type == 'pessoa':
+            self._create_alert_people(current_frame)
