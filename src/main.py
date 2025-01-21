@@ -31,12 +31,12 @@ with open('alertas/pessoasSemCapacete/alertas.log', 'w') as log_file:
     pass  # Limpa o conteúdo do arquivo
 
 # Carregar modelo YOLO e configurar vídeo
-model = YOLO(r"best.pt")
+model = YOLO(r"model/best.pt")
 video_path = 'ch5-cut.mp4'
 cap = cv2.VideoCapture(video_path)
 
 # Definir o instante inicial do vídeo (em segundos)
-start_time_seconds = 80  # Por exemplo, 30 segundos
+start_time_seconds = 0  # Por exemplo, 30 segundos
 cap.set(cv2.CAP_PROP_POS_MSEC, start_time_seconds * 1000)  # Define a posição inicial em milissegundos
 
 
@@ -45,9 +45,7 @@ video_analyzer_vehicles = videoAnalyzer(object_type='veiculo')
 video_analyzer_people = videoAnalyzer(object_type='pessoa')
 
 current_frame = 0
-recent_detections = []
-alert_log = []
-next_person_id = [1]  # Contador global para IDs únicos
+
 
 while cap.isOpened():
     success, frame = cap.read()
@@ -65,9 +63,9 @@ while cap.isOpened():
         frame = results[0].plot()
 
         # Analisar veículos e pessoas no frame
-        video_analyzer_vehicles.vehicle_analysis(frame, results, current_frame, timestamp)
-        video_analyzer_people.people_analysis(frame, results, current_frame, timestamp)
-        video_analyzer_people.create_alert(current_frame)
+        video_analyzer_vehicles.video_analysis(frame,results,current_frame,timestamp)
+        video_analyzer_people.video_analysis(frame,results,current_frame,timestamp)
+      
 
         # Exibir saída em tempo real
         frame_resized = cv2.resize(frame, (640, 360))

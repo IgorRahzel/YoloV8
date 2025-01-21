@@ -1,7 +1,7 @@
 from BaseObject import BaseObject
 class vehicle(BaseObject):
     def __init__(self,id):
-        super.__init__(id)
+        super().__init__(id)
     
 
     def add_detection(self, bbox, frame_id):

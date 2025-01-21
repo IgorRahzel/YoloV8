@@ -1,5 +1,5 @@
 from BaseObject import BaseObject
-class Worker(BaseObject):
+class worker(BaseObject):
     def __init__(self, id):
         super().__init__(id)  # Inicializa atributos da classe base
         self.helmet_status_history = []  # Histórico de uso de capacete (True/False)
