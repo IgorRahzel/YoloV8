@@ -36,7 +36,7 @@ video_path = 'ch5-cut.mp4'
 cap = cv2.VideoCapture(video_path)
 
 # Definir o instante inicial do vídeo (em segundos)
-start_time_seconds = 0  # Por exemplo, 30 segundos
+start_time_seconds = 150  # Por exemplo, 30 segundos
 cap.set(cv2.CAP_PROP_POS_MSEC, start_time_seconds * 1000)  # Define a posição inicial em milissegundos
 
 
@@ -70,7 +70,7 @@ while cap.isOpened():
         # Exibir saída em tempo real
         frame_resized = cv2.resize(frame, (640, 360))
         cv2.imshow('output', frame_resized)
-        keyboard = cv2.waitKey(10)
+        keyboard = cv2.waitKey(1)
         if keyboard == ord('q') or keyboard == 27:
             break
     else:

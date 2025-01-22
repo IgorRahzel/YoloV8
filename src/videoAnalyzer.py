@@ -50,12 +50,12 @@ class videoAnalyzer:
 
 
 
-    def _save_imgs(self, dir_path, img_name, img):
+    def _save_imgs(self, dir_path, img_name, img,overwrite=False):
         # Cria o diretório, se ainda não existir
         os.makedirs(dir_path, exist_ok=True)
         img_path = os.path.join(dir_path, img_name)
         # Verifica se o arquivo já existe antes de salvar
-        if not os.path.exists(img_path):
+        if not os.path.exists(img_path) or overwrite:
             cv2.imwrite(img_path, img)
 
     
@@ -141,7 +141,7 @@ class videoAnalyzer:
                                     results=results,
                                     current_frame=current_frame,
                                     timestamp=timestamp,
-                                    object_type='pessoa',
+                                    object_type=self.object_type,
                                     storage_dict=self.people,
                                     object_class=worker,
                                     id_counter=self.person_id,
@@ -155,10 +155,49 @@ class videoAnalyzer:
     
    
 
-    def create_obj_alert(self,current_frame,storage_dict):
-         # Verificar se há pessoas que não foram vistas recentemente
+    def create_obj_alert(self, current_frame, storage_dict):
         to_remove = []
-        for obj_id, obj in storage_dict.items():
+        if self.object_type == 'pessoa':
+            for obj_id, obj in storage_dict.items():
+                # Verificar se objeto foi visto em mais de 4 frames
+                if len(obj.bbox_history) > 4:
+                    if current_frame - obj.last_frame_seen > 30:
+                        total_detections = len(obj.helmet_status_history)
+                        no_helmet_count = obj.helmet_status_history.count(False)
+                        helmet_ratio = no_helmet_count / total_detections if total_detections > 0 else 0
+
+                        print(f"Pessoa {obj_id} saiu do vídeo. Razão sem capacete: {helmet_ratio:.2f}")
+
+                        if helmet_ratio > 0.80:
+                            roi = obj.frame
+                            self._save_imgs('imgs/PessoasSemCapacete', f'pessoa_{obj_id}.png', roi)
+                            self._log_alerts(alert_type='pessoa', obj_id=obj_id, timestamp=obj.timestamp, alert_path='alertas/pessoasSemCapacete/alertas.log')
+                        
+                        to_remove.append(obj_id)
+
+        elif self.object_type == 'veiculo':
+            for obj_id, obj in storage_dict.items():
+                if len(obj.bbox_history) > 10:
+                    # Salvar imagem e criar log imediatamente ao detectar o veículo
+                    roi = obj.frame
+                    self._save_imgs('imgs/Veiculos', f'veiculo_{obj_id}.png', roi)
+                    self._log_alerts(alert_type='vehicle', obj_id=obj_id, timestamp=obj.timestamp, alert_path='alertas/veiculos/alertas.log')
+                    
+                    # Caso carro não seja detectado por 30 frames, remover da lista
+                    if current_frame - obj.last_frame_seen > 30:
+                        to_remove.append(obj_id)
+
+        # Remover objetos que saíram do vídeo
+        for obj_id in to_remove:
+            del storage_dict[obj_id]
+
+
+           
+
+    '''
+    # Verificar se há pessoas que não foram vistas recentemente
+    to_remove = []
+    for obj_id, obj in storage_dict.items():
             if current_frame - obj.last_frame_seen > 30:  # Exemplo: 30 frames sem ser detectado
                 if self.object_type == 'pessoa':
                     # Pessoa saiu do vídeo, calcular estatísticas
@@ -185,10 +224,11 @@ class videoAnalyzer:
         # Remover pessoas que saíram do vídeo
         for obj_id in to_remove:
             del storage_dict[obj_id]
-
+        '''
 
     def create_alert(self,current_frame):
-        if self.object_type == 'veiculos':
+        if self.object_type == 'veiculo':
             self.create_obj_alert(current_frame,self.automobile)
         elif self.object_type == 'pessoa':
             self.create_obj_alert(current_frame,self.people)
+    
