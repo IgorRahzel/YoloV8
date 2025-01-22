@@ -57,7 +57,7 @@ class videoAnalyzer:
         # Verifica se o arquivo já existe antes de salvar
         if not os.path.exists(img_path) or overwrite:
             cv2.imwrite(img_path, img)
-
+    
     
     def _object_analysis(self, frame, results, current_frame, timestamp, object_type, storage_dict, object_class, id_counter, threshold, check_helmet=False):
     
@@ -98,7 +98,8 @@ class videoAnalyzer:
             print(f'matched_id: {matched_id}')
 
             # Armazenar ROI e timestamp
-            if len(storage_dict[matched_id].bbox_history) < 10:
+            area = (xmax - xmin) * (ymax - ymin)
+            if area.item() > storage_dict[matched_id].frame_area():
                 roi = self._get_roi(frame, (xmin, ymin, xmax, ymax))
                 storage_dict[matched_id].frame = roi
                 storage_dict[matched_id].timestamp = timestamp
@@ -177,15 +178,14 @@ class videoAnalyzer:
 
         elif self.object_type == 'veiculo':
             for obj_id, obj in storage_dict.items():
-                if len(obj.bbox_history) > 10:
-                    # Salvar imagem e criar log imediatamente ao detectar o veículo
-                    roi = obj.frame
-                    self._save_imgs('imgs/Veiculos', f'veiculo_{obj_id}.png', roi)
-                    self._log_alerts(alert_type='vehicle', obj_id=obj_id, timestamp=obj.timestamp, alert_path='alertas/veiculos/alertas.log')
-                    
-                    # Caso carro não seja detectado por 30 frames, remover da lista
-                    if current_frame - obj.last_frame_seen > 30:
-                        to_remove.append(obj_id)
+                # Salvar imagem e criar log imediatamente ao detectar o veículo
+                roi = obj.frame
+                self._save_imgs('imgs/Veiculos', f'veiculo_{obj_id}.png', roi, overwrite=True)
+                self._log_alerts(alert_type='vehicle', obj_id=obj_id, timestamp=obj.timestamp, alert_path='alertas/veiculos/alertas.log')
+                
+                # Caso carro não seja detectado por 30 frames, remover da lista
+                if current_frame - obj.last_frame_seen > 30:
+                    to_remove.append(obj_id)
 
         # Remover objetos que saíram do vídeo
         for obj_id in to_remove:

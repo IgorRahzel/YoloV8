@@ -6,3 +6,6 @@ class vehicle(BaseObject):
 
     def add_detection(self, bbox, frame_id):
         return super().add_detection(bbox, frame_id)
+    
+    def frame_area(self):
+        return super().frame_area()
