@@ -45,7 +45,8 @@ Yolov8
 │
 │
 ├── video_results                      # Pasta para salvar vídeos gerados
-│
+│   └── video_output_wpp.mp4           # Video de 1 minuto com os resultado
+│   
 ├── reademe_imgs                       # Pasta para salvar imagens utilizadas no README
 │
 ├── .gitignore                         # Arquivos não necessários
