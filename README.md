@@ -9,10 +9,20 @@ Este projeto utiliza a YOLOv8 treinada em um dataset contendo as classes *capace
 - Emissão de um alerta informando o *ID* da pessoa identificada e o *timestamp* em que occorreu a identificação
 - Captura da imagem da pessoa/veículo detectado
 
-## Tabela de Conteúdos
-1. Estrutura do Repositório
-2. Como Executar
-3. Funcionamento do Código
+# Tabela de Conteúdos
+
+1. [Estrutura do Repositório](#estrutura-do-repositório)
+2. [Como Executar](#como-executar)
+    - [1. Instalar as dependências](#1-instalar-as-dependências)
+    - [2. Navegue até a pasta do projeto](#2-navegue-até-a-pasta-do-projeto)
+    - [3. Saída](#3-saída)
+3. [Funcionamento do Código](#funcionamento-do-codigo)
+    - [Classes Auxiliares](#classes-auxiliares)
+        - [1. BaseObject](#1-baseobject)
+        - [2. vehicle](#2-vehicle)
+        - [3. worker](#3-worker)
+    - [Classe videoAnalyzer](#classe-videoanalyzer)
+    - [Arquivo principal](#arquivo-principal)
 
 # Extrutura do Repositório:
 ```bash
@@ -33,6 +43,10 @@ Yolov8
 │   └── best.pt                        # Pesos da YOLOv8
 ├── requirements.txt                   # bibliotecas utilizadas
 │
+│
+├── video_results                      # Pasta para salvar vídeos gerados
+│
+├── reademe_imgs                       # Pasta para salvar imagens utilizadas no README
 │
 ├── .gitignore                         # Arquivos não necessários
 │  
@@ -115,5 +129,5 @@ Os métodos utilizados são os seguintes:
 - `create_alert(self,current_frame)` ➡️ Faz chamada para `create_obj_alert()` de acordo com o tipo do objeto
 
 ## Arquivo principal
-No arquivo `main.py` são criados os diretórios onde são armazendos os alertas e as imagens. Também é carregado a rede *YoloV8* com os pesos disponíveis em *model/best.pt*. São inicializadas duas instâncias da classe `videoAnalyzer`, uma para a detecção de pessoas e outra para a de veículos. É então feito o processamento do vídeo, cada um de seus frames é enviado ao modelo e então é efeito a análise do resultado obtido para gerar possíveis emissões de alertas e salvar imagens.
+No arquivo `main.py` é importada a rede YOLOv8, a qual é carregado utilizando os pesos disponíveis no diretório `model`, também são criadas duas instâncias da classe `videoAnalyzer`, uma para a detecção de pessoas sem capacete e a outra para a detecção de veículos. Em seguida é feito processamento frame a frame do vídeo, é então extraída uma ROI de cada frame para limitar a região onde as detecções são realizadas ,cada frame é enviado para a YOLO, a partir dos resultados retornados pela rede é feito o salvamento de imagens e geração dos logs nos arquivos de alertas através do uso do método `video_analysis` presente em cada uma das instâncias de `videoAnalyzer` criadas anteriormente.
 
