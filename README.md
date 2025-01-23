@@ -1,7 +1,7 @@
 
 # Alerta de EPI e veículos
 
-![Demo of the project](./results/output.gif)
+![Demo of the project](./reademe_imgs/output_video.gif)
 
 
 Este projeto utiliza a YOLOv8 treinada em um dataset contendo as classes *capacete*,*pessoa* e *veículo* para a tarefa de identificação de pessoas sem EPI e veículos que circulam em uma área restrito. Dessa forma no caso de identificação são realizadas as seguintes ações:

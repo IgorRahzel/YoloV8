@@ -97,7 +97,7 @@ while cap.isOpened():
         video_analyzer_people.video_analysis(frame, results, current_frame, timestamp)
 
         # Escrever o frame no vídeo de saída
-        out.write(frame)
+        #out.write(frame)
 
         # Exibir o frame
         cv2.imshow('output', frame)
