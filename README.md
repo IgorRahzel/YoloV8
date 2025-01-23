@@ -35,10 +35,10 @@ Yolov8
 ├── ch5-cut.mp4                        # vídeo onde é feita a inferência
 ├── imgs                               # Pasta onde são salvas as imagens
 │   ├── PessoasSemCapacete             # Pasta para imagens das pessoas sem capacete
-│   │   ├── pessoa_1.png               
-│   │   ├── pessoa_2.png               
-│   │   └── pessoa_3.png               
+│   │   ├── pessoa_3.png               
 │   └── Veiculos                       # Pasta para as imagens dos veículos
+│       ├── veiculo_1.png
+│
 ├── model                              # Pasta onde são salvos os arquivos contendo os pesos da YOLOv8
 │   └── best.pt                        # Pesos da YOLOv8
 ├── requirements.txt                   # bibliotecas utilizadas
