@@ -59,6 +59,7 @@ video_analyzer_people = videoAnalyzer(object_type='pessoa')
 current_frame = 0
 
 # Configuração para salvar o vídeo de saída
+'''
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 frame_width = 640
 frame_height = 360
@@ -70,6 +71,7 @@ out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
 # Controle para capturar até 1 minuto (60 segundos)
 max_duration_seconds = 60
 max_frames = fps * max_duration_seconds
+'''
 
 while cap.isOpened():
     success, frame = cap.read()
@@ -96,8 +98,9 @@ while cap.isOpened():
         video_analyzer_vehicles.video_analysis(frame, results, current_frame, timestamp)
         video_analyzer_people.video_analysis(frame, results, current_frame, timestamp)
 
+        '''
         # Escrever o frame no vídeo de saída
-        #out.write(frame)
+        out.write(frame)
 
         # Exibir o frame
         cv2.imshow('output', frame)
@@ -106,6 +109,10 @@ while cap.isOpened():
         if current_frame >= max_frames:
             print("Tempo máximo atingido. Encerrando a captura.")
             break
+        '''
+
+        # Exibir o frame
+        #cv2.imshow('output', frame)
 
         keyboard = cv2.waitKey(1)
         if keyboard == ord('q') or keyboard == 27:
@@ -117,7 +124,7 @@ while cap.isOpened():
 
 # Finalizar captura e liberar recursos
 cap.release()
-out.release()
+#out.release()
 cv2.destroyAllWindows()
 
-print(f"Vídeo salvo em: {output_path}")
+#print(f"Vídeo salvo em: {output_path}")

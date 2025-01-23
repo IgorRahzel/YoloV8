@@ -15,7 +15,7 @@ class videoAnalyzer:
         self.person_id = [1]
 
         
-    
+    # Extrair ROI contendo o objeto detectado
     def _get_roi(self,frame,coordenadas):
         x_min, y_min, x_max, y_max = map(int, coordenadas)
         h, w, _ = frame.shape
@@ -27,7 +27,7 @@ class videoAnalyzer:
         return roi
     
  
-
+    # Gerar log para alertas
     def _log_alerts(self, alert_type, obj_id, timestamp, alert_path):
 
         # Garante que o diretório do arquivo de log exista
@@ -191,41 +191,7 @@ class videoAnalyzer:
         for obj_id in to_remove:
             del storage_dict[obj_id]
 
-
-           
-
-    '''
-    # Verificar se há pessoas que não foram vistas recentemente
-    to_remove = []
-    for obj_id, obj in storage_dict.items():
-            if current_frame - obj.last_frame_seen > 30:  # Exemplo: 30 frames sem ser detectado
-                if self.object_type == 'pessoa':
-                    # Pessoa saiu do vídeo, calcular estatísticas
-                    total_detections = len(obj.helmet_status_history)
-                    no_helmet_count = obj.helmet_status_history.count(False)
-                    helmet_ratio = no_helmet_count / total_detections if total_detections > 0 else 0
-
-                    print(f"Pessoa {obj_id} saiu do vídeo. Razão sem capacete: {helmet_ratio:.2f}")
-
-                    if helmet_ratio > 0.80:  # Exemplo: Threshold de 50% sem capacete
-                        # Salvar imagem da última posição detectada
-                        roi = obj.frame
-                        self._save_imgs('imgs/PessoasSemCapacete', f'pessoa_{obj_id}.png', roi)
-                        self._log_alerts(alert_type='pessoa', obj_id=obj_id, timestamp=obj.timestamp, alert_path='alertas/pessoasSemCapacete/alertas.log')
-                
-                elif self.object_type == 'veiculo':
-                    roi = obj.frame
-                    self._save_imgs('imgs/Veiculos', f'veiculo_{obj_id}.png', roi)
-                    self._log_alerts(alert_type='vehicle', obj_id= obj_id, timestamp=vehicle.timestamp, alert_path='alertas/veiculos/alertas.log')
-
-                # Adicionar o ID da pessoa à lista de remoção
-                to_remove.append(obj_id)
-            
-        # Remover pessoas que saíram do vídeo
-        for obj_id in to_remove:
-            del storage_dict[obj_id]
-        '''
-
+    # Criar alertas para objetos detectados
     def create_alert(self,current_frame):
         if self.object_type == 'veiculo':
             self.create_obj_alert(current_frame,self.automobile)
